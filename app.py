@@ -6,7 +6,7 @@ from typing import Optional
 
 # Configuração da página
 st.set_page_config(
-    page_title="🚀 AI Prompt Generator",
+    page_title="AI Prompt Generator",
     page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -94,7 +94,37 @@ def load_guide() -> str:
         st.error(f"Erro ao carregar o guia: {e}")
         return ""
 
-def configure_gemini(api_key: str) -> bool:
+def process_uploaded_files(uploaded_files):
+    """Processa múltiplos arquivos enviados e retorna conteúdo estruturado"""
+    if not uploaded_files:
+        return "", []
+    
+    processed_files = []
+    total_content = ""
+    
+    for file in uploaded_files:
+        try:
+            # Ler conteúdo do arquivo
+            file_content = file.read().decode('utf-8')
+            
+            # Informações do arquivo
+            file_info = {
+                'name': file.name,
+                'size': len(file_content),
+                'type': file.name.split('.')[-1].lower() if '.' in file.name else 'txt',
+                'content': file_content
+            }
+            
+            processed_files.append(file_info)
+            total_content += f"\n\n--- ARQUIVO: {file.name} ---\n{file_content}"
+            
+            # Reset file pointer para outras operações
+            file.seek(0)
+            
+        except Exception as e:
+            st.error(f"❌ Erro ao processar {file.name}: {e}")
+    
+    return total_content, processed_files
     """Configura a API do Gemini"""
     try:
         genai.configure(api_key=api_key)
@@ -103,7 +133,7 @@ def configure_gemini(api_key: str) -> bool:
         st.error(f"Erro ao configurar Gemini: {e}")
         return False
 
-def generate_prompt(project_idea: str, code_snippets: str, guide_content: str, api_key: str) -> Optional[str]:
+def generate_prompt(project_idea: str, code_snippets: str, guide_content: str, api_key: str, file_count: int = 0) -> Optional[str]:
     """Gera o prompt otimizado usando Gemini"""
     try:
         if not configure_gemini(api_key):
@@ -111,28 +141,51 @@ def generate_prompt(project_idea: str, code_snippets: str, guide_content: str, a
             
         model = genai.GenerativeModel('gemini-2.5-flash-lite-preview-06-17')
         
+        file_context = ""
+        if file_count > 0:
+            file_context = f"\n\nO usuário forneceu {file_count} arquivo(s) de código como contexto adicional. Use essas informações para criar um prompt mais específico e contextualizado."
+        
         system_prompt = f"""
-Você é um especialista em engenharia de prompts. Sua tarefa é criar prompts otimizados e eficazes.
+Você é um especialista em engenharia de prompts com vasta experiência em desenvolvimento de software e IA. Sua tarefa é criar prompts otimizados, profissionais e extremamente eficazes.
 
 GUIA DE BOAS PRÁTICAS:
 {guide_content}
 
-Com base no guia acima e nas informações fornecidas pelo usuário, crie um prompt otimizado que:
+CONTEXTO DO PROJETO:
+Ideia/Objetivo: {project_idea}
 
-1. Seja claro e específico
-2. Forneça contexto adequado
-3. Inclua instruções detalhadas
-4. Defina o formato de saída esperado
-5. Considere possíveis edge cases
-6. Somente responda com o prompt otimizado, sem explicações adicionais
+CÓDIGO E ARQUIVOS FORNECIDOS:
+{code_snippets if code_snippets else "Nenhum código fornecido"}{file_context}
 
-INFORMAÇÕES DO PROJETO:
-Ideia do Projeto: {project_idea}
+INSTRUÇÕES PARA CRIAÇÃO DO PROMPT:
 
-CÓDIGO/TRECHOS FORNECIDOS:
-{code_snippets if code_snippets else "Nenhum código fornecido"}
+1. **ANÁLISE PRIMEIRO**: Analise cuidadosamente a ideia do projeto e os arquivos fornecidos para entender:
+   - O contexto técnico e domínio
+   - As tecnologias sendo utilizadas
+   - A complexidade e escopo do projeto
+   - Possíveis desafios e necessidades específicas
 
-Gere um prompt profissional e otimizado que ajudará o usuário a alcançar seus objetivos de forma eficaz.
+2. **ESTRUTURE O PROMPT** seguindo as melhores práticas:
+   - Contexto claro e específico
+   - Papel/persona adequado para a tarefa
+   - Instruções detalhadas e organizadas
+   - Formato de saída bem definido
+   - Exemplos quando apropriado
+   - Restrições e considerações importantes
+
+3. **OTIMIZE PARA RESULTADOS**: O prompt deve ser:
+   - Específico o suficiente para evitar ambiguidades
+   - Completo para cobrir todos os aspectos necessários
+   - Estruturado para facilitar a compreensão
+   - Prático e acionável
+
+4. **CONSIDERE O CONTEXTO TÉCNICO**: Se arquivos de código foram fornecidos:
+   - Referencie tecnologias específicas encontradas
+   - Considere padrões de código e arquitetura
+   - Inclua detalhes técnicos relevantes
+   - Mantenha consistência com o stack tecnológico
+
+Crie um prompt profissional, detalhado e otimizado que maximize as chances de obter resultados excepcionais para este projeto específico, somente responda com o prompt otimizado, sem explicações adicionais.
 """
 
         response = model.generate_content(system_prompt)
@@ -169,6 +222,34 @@ def main():
         
         st.divider()
         
+        # Estatísticas dos arquivos (se houver)
+        if 'uploaded_files' in locals() and uploaded_files:
+            st.header("📊 Arquivos Carregados")
+            st.metric("Total de arquivos", len(uploaded_files))
+            
+            # Mostrar tipos de arquivo
+            file_types = {}
+            total_chars = 0
+            for file in uploaded_files:
+                ext = file.name.split('.')[-1].lower()
+                file_types[ext] = file_types.get(ext, 0) + 1
+                try:
+                    content = file.read().decode('utf-8')
+                    total_chars += len(content)
+                    # Reset file pointer
+                    file.seek(0)
+                except:
+                    pass
+            
+            st.write("**Tipos de arquivo:**")
+            for ext, count in file_types.items():
+                st.write(f"• `.{ext}` ({count})")
+            
+            if total_chars > 0:
+                st.metric("Total de caracteres", f"{total_chars:,}")
+        
+        st.divider()
+        
         # Informações sobre o app
         st.header("📋 Como usar")
         st.markdown("""
@@ -191,7 +272,7 @@ def main():
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.header("💡 Describe seu Projeto")
+        st.header("💡 Descreva seu Projeto")
         
         project_idea = st.text_area(
             "Ideia do Projeto",
@@ -209,25 +290,88 @@ def main():
             help="Adicione código existente para dar mais contexto ao prompt"
         )
         
-        # Opção de upload de arquivo
-        uploaded_file = st.file_uploader(
-            "Ou faça upload de um arquivo de código",
-            type=['py', 'js', 'html', 'css', 'json', 'md', 'txt'],
-            help="Formatos suportados: Python, JavaScript, HTML, CSS, JSON, Markdown, TXT"
-        )
+        # Opção de upload de múltiplos arquivos
+        st.subheader("📁 Upload de Arquivos")
         
-        if uploaded_file is not None:
-            try:
-                file_content = uploaded_file.read().decode('utf-8')
-                st.text_area(
-                    f"Conteúdo do arquivo: {uploaded_file.name}",
-                    value=file_content,
-                    height=100,
-                    disabled=True
-                )
-                code_snippets += f"\n\n--- Arquivo: {uploaded_file.name} ---\n{file_content}"
-            except Exception as e:
-                st.error(f"Erro ao ler arquivo: {e}")
+        # Botão para limpar arquivos (se houver)
+        if 'clear_files' not in st.session_state:
+            st.session_state.clear_files = False
+            
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            uploaded_files = st.file_uploader(
+                "Faça upload de arquivos de código",
+                type=['py', 'js', 'html', 'css', 'json', 'md', 'txt', 'jsx', 'ts', 'tsx', 'php', 'java', 'cpp', 'c', 'sql', 'yaml', 'yml', 'xml', 'sh', 'bat'],
+                accept_multiple_files=True,
+                help="Formatos suportados: Python, JavaScript, HTML, CSS, JSON, Markdown, TypeScript, PHP, Java, C++, SQL, YAML, XML, Shell e outros",
+                key="file_uploader"
+            )
+        
+        with col2:
+            if uploaded_files:
+                if st.button("🗑️ Limpar", help="Remover todos os arquivos", type="secondary"):
+                    st.session_state.clear_files = True
+                    st.rerun()
+        
+        # Processar arquivos enviados
+        uploaded_content = ""
+        if uploaded_files:
+            uploaded_content, processed_files = process_uploaded_files(uploaded_files)
+            
+            st.markdown("---")
+            st.subheader(f"📊 Resumo: {len(processed_files)} arquivo(s) carregado(s)")
+            
+            # Mostrar estatísticas
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Arquivos", len(processed_files))
+            with col2:
+                total_chars = sum(f['size'] for f in processed_files)
+                st.metric("Caracteres", f"{total_chars:,}")
+            with col3:
+                types = set(f['type'] for f in processed_files)
+                st.metric("Tipos", len(types))
+            
+            # Organizar arquivos por tipo
+            if len(processed_files) <= 10:
+                # Para poucos arquivos, mostrar detalhes
+                with st.expander("📁 Detalhes dos arquivos", expanded=True):
+                    for i, file_info in enumerate(processed_files):
+                        col1, col2, col3 = st.columns([3, 1, 1])
+                        with col1:
+                            st.write(f"📄 **{file_info['name']}**")
+                        with col2:
+                            st.write(f"`{file_info['type']}`")
+                        with col3:
+                            st.write(f"{file_info['size']:,} chars")
+                        
+                        # Preview do conteúdo
+                        if file_info['size'] > 0:
+                            preview = file_info['content'][:200] + ("..." if len(file_info['content']) > 200 else "")
+                            st.code(preview, language=file_info['type'])
+                        
+                        if i < len(processed_files) - 1:
+                            st.divider()
+            else:
+                # Para muitos arquivos, mostrar lista compacta
+                with st.expander(f"📋 Lista de {len(processed_files)} arquivos"):
+                    # Agrupar por tipo
+                    files_by_type = {}
+                    for file_info in processed_files:
+                        file_type = file_info['type']
+                        if file_type not in files_by_type:
+                            files_by_type[file_type] = []
+                        files_by_type[file_type].append(file_info)
+                    
+                    for file_type, files in files_by_type.items():
+                        st.write(f"**📁 {file_type.upper()} ({len(files)} arquivos)**")
+                        for file_info in files:
+                            st.write(f"  • {file_info['name']} ({file_info['size']:,} chars)")
+                        st.write("")
+        
+        # Combinar código manual com arquivos
+        if uploaded_content:
+            code_snippets = code_snippets + uploaded_content
 
     with col2:
         st.header("✨ Prompt Gerado")
@@ -240,7 +384,8 @@ def main():
             else:
                 with st.spinner("🔄 Gerando prompt otimizado..."):
                     guide_content = load_guide()
-                    generated_prompt = generate_prompt(project_idea, code_snippets, guide_content, api_key)
+                    file_count = len(uploaded_files) if uploaded_files else 0
+                    generated_prompt = generate_prompt(project_idea, code_snippets, guide_content, api_key, file_count)
                     
                     if generated_prompt:
                         st.markdown('<div class="generated-prompt">', unsafe_allow_html=True)
