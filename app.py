@@ -23,18 +23,15 @@ st.markdown("""
         margin-bottom: 2rem;
         text-align: center;
     }
-    
     .stTextArea textarea {
         background-color: #f8f9fa;
         border: 2px solid #e9ecef;
         border-radius: 8px;
     }
-    
     .stTextArea textarea:focus {
         border-color: #667eea;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
-    
     .generated-prompt {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         padding: 1.5rem;
@@ -42,11 +39,9 @@ st.markdown("""
         border-left: 5px solid #667eea;
         margin-top: 1rem;
     }
-    
     .sidebar .sidebar-content {
         background-color: #f8f9fa;
     }
-    
     .success-message {
         background-color: #d4edda;
         color: #155724;
@@ -55,7 +50,6 @@ st.markdown("""
         border-left: 4px solid #28a745;
         margin: 1rem 0;
     }
-    
     .error-message {
         background-color: #f8d7da;
         color: #721c24;
@@ -104,27 +98,23 @@ def process_uploaded_files(uploaded_files):
     
     for file in uploaded_files:
         try:
-            # Ler conteúdo do arquivo
             file_content = file.read().decode('utf-8')
-            
-            # Informações do arquivo
             file_info = {
                 'name': file.name,
                 'size': len(file_content),
                 'type': file.name.split('.')[-1].lower() if '.' in file.name else 'txt',
                 'content': file_content
             }
-            
             processed_files.append(file_info)
             total_content += f"\n\n--- ARQUIVO: {file.name} ---\n{file_content}"
-            
-            # Reset file pointer para outras operações
             file.seek(0)
-            
         except Exception as e:
             st.error(f"❌ Erro ao processar {file.name}: {e}")
     
     return total_content, processed_files
+
+# <<<<<<<<<<<<<<<< FIX #1: A FUNÇÃO configure_gemini ESTAVA NO LUGAR ERRADO >>>>>>>>>>>>>>>>
+def configure_gemini(api_key: str) -> bool:
     """Configura a API do Gemini"""
     try:
         genai.configure(api_key=api_key)
@@ -136,10 +126,11 @@ def process_uploaded_files(uploaded_files):
 def generate_prompt(project_idea: str, code_snippets: str, guide_content: str, api_key: str, file_count: int = 0) -> Optional[str]:
     """Gera o prompt otimizado usando Gemini"""
     try:
+        # A chamada para configure_gemini agora funciona
         if not configure_gemini(api_key):
             return None
             
-        model = genai.GenerativeModel('gemini-2.5-flash-lite-preview-06-17')
+        model = genai.GenerativeModel('gemini-2.5-flash-lite-preview-06-17') # Usando um modelo estável
         
         file_context = ""
         if file_count > 0:
@@ -196,7 +187,6 @@ Crie um prompt profissional, detalhado e otimizado que maximize as chances de ob
         return None
 
 def main():
-    # Header principal
     st.markdown("""
     <div class="main-header">
         <h1>🚀 AI Prompt Generator</h1>
@@ -204,53 +194,18 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # Sidebar para configurações
     with st.sidebar:
         st.header("⚙️ Configurações")
-        
-        # Campo para API Key
         api_key = st.text_input(
             "🔑 Google Gemini API Key",
             type="password",
             help="Insira sua chave de API do Google Gemini"
         )
-        
         if api_key:
             st.markdown('<div class="success-message">✅ API Key configurada!</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="error-message">⚠️ API Key necessária para funcionar</div>', unsafe_allow_html=True)
-        
         st.divider()
-        
-        # Estatísticas dos arquivos (se houver)
-        if 'uploaded_files' in locals() and uploaded_files:
-            st.header("📊 Arquivos Carregados")
-            st.metric("Total de arquivos", len(uploaded_files))
-            
-            # Mostrar tipos de arquivo
-            file_types = {}
-            total_chars = 0
-            for file in uploaded_files:
-                ext = file.name.split('.')[-1].lower()
-                file_types[ext] = file_types.get(ext, 0) + 1
-                try:
-                    content = file.read().decode('utf-8')
-                    total_chars += len(content)
-                    # Reset file pointer
-                    file.seek(0)
-                except:
-                    pass
-            
-            st.write("**Tipos de arquivo:**")
-            for ext, count in file_types.items():
-                st.write(f"• `.{ext}` ({count})")
-            
-            if total_chars > 0:
-                st.metric("Total de caracteres", f"{total_chars:,}")
-        
-        st.divider()
-        
-        # Informações sobre o app
         st.header("📋 Como usar")
         st.markdown("""
         1. **Insira sua API Key** do Google Gemini
@@ -258,20 +213,17 @@ def main():
         3. **Adicione código** (opcional) para contexto
         4. **Clique em Gerar** para criar seu prompt otimizado
         """)
-        
         st.divider()
-        
-        # Link para obter API Key
         st.markdown("""
         ### 🔗 Links Úteis
         - [Obter API Key Gemini](https://makersuite.google.com/app/apikey)
         - [Documentação Gemini](https://ai.google.dev/docs)
         """)
 
-    # Conteúdo principal
-    col1, col2 = st.columns([1, 1])
+    # <<<<<<<<<<<<<<<< FIX #2: RENOMEEI AS COLUNAS PRINCIPAIS PARA EVITAR CONFLITO >>>>>>>>>>>>>>>>
+    main_col1, main_col2 = st.columns([1.2, 0.8])
     
-    with col1:
+    with main_col1:
         st.header("💡 Descreva seu Projeto")
         
         project_idea = st.text_area(
@@ -290,15 +242,14 @@ def main():
             help="Adicione código existente para dar mais contexto ao prompt"
         )
         
-        # Opção de upload de múltiplos arquivos
         st.subheader("📁 Upload de Arquivos")
         
-        # Botão para limpar arquivos (se houver)
         if 'clear_files' not in st.session_state:
             st.session_state.clear_files = False
             
-        col1, col2 = st.columns([3, 1])
-        with col1:
+        # <<<<<<<<<<<<<<<< FIX #2: USEI NOMES DE VARIÁVEIS ÚNICOS PARA AS COLUNAS ANINHADAS >>>>>>>>>>>>>>>>
+        uploader_col, button_col = st.columns([3, 1])
+        with uploader_col:
             uploaded_files = st.file_uploader(
                 "Faça upload de arquivos de código",
                 type=['py', 'js', 'html', 'css', 'json', 'md', 'txt', 'jsx', 'ts', 'tsx', 'php', 'java', 'cpp', 'c', 'sql', 'yaml', 'yml', 'xml', 'sh', 'bat'],
@@ -307,13 +258,12 @@ def main():
                 key="file_uploader"
             )
         
-        with col2:
+        with button_col:
             if uploaded_files:
-                if st.button("🗑️ Limpar", help="Remover todos os arquivos", type="secondary"):
+                if st.button("🗑️ Limpar", help="Remover todos os arquivos", use_container_width=True):
                     st.session_state.clear_files = True
                     st.rerun()
         
-        # Processar arquivos enviados
         uploaded_content = ""
         if uploaded_files:
             uploaded_content, processed_files = process_uploaded_files(uploaded_files)
@@ -321,31 +271,27 @@ def main():
             st.markdown("---")
             st.subheader(f"📊 Resumo: {len(processed_files)} arquivo(s) carregado(s)")
             
-            # Mostrar estatísticas
-            col1, col2, col3 = st.columns(3)
-            with col1:
+            stat_col1, stat_col2, stat_col3 = st.columns(3)
+            with stat_col1:
                 st.metric("Arquivos", len(processed_files))
-            with col2:
+            with stat_col2:
                 total_chars = sum(f['size'] for f in processed_files)
                 st.metric("Caracteres", f"{total_chars:,}")
-            with col3:
+            with stat_col3:
                 types = set(f['type'] for f in processed_files)
                 st.metric("Tipos", len(types))
             
-            # Organizar arquivos por tipo
             if len(processed_files) <= 10:
-                # Para poucos arquivos, mostrar detalhes
                 with st.expander("📁 Detalhes dos arquivos", expanded=True):
                     for i, file_info in enumerate(processed_files):
-                        col1, col2, col3 = st.columns([3, 1, 1])
-                        with col1:
+                        file_name_col, file_type_col, file_size_col = st.columns([3, 1, 1])
+                        with file_name_col:
                             st.write(f"📄 **{file_info['name']}**")
-                        with col2:
+                        with file_type_col:
                             st.write(f"`{file_info['type']}`")
-                        with col3:
+                        with file_size_col:
                             st.write(f"{file_info['size']:,} chars")
                         
-                        # Preview do conteúdo
                         if file_info['size'] > 0:
                             preview = file_info['content'][:200] + ("..." if len(file_info['content']) > 200 else "")
                             st.code(preview, language=file_info['type'])
@@ -353,9 +299,7 @@ def main():
                         if i < len(processed_files) - 1:
                             st.divider()
             else:
-                # Para muitos arquivos, mostrar lista compacta
                 with st.expander(f"📋 Lista de {len(processed_files)} arquivos"):
-                    # Agrupar por tipo
                     files_by_type = {}
                     for file_info in processed_files:
                         file_type = file_info['type']
@@ -369,13 +313,15 @@ def main():
                             st.write(f"  • {file_info['name']} ({file_info['size']:,} chars)")
                         st.write("")
         
-        # Combinar código manual com arquivos
         if uploaded_content:
             code_snippets = code_snippets + uploaded_content
 
-    with col2:
+    with main_col2:
         st.header("✨ Prompt Gerado")
         
+        # Movi a área de resultado para fora do botão para manter o layout
+        result_area = st.container()
+
         if st.button("🚀 Gerar Prompt Otimizado", type="primary", use_container_width=True):
             if not api_key:
                 st.error("⚠️ Por favor, insira sua API Key do Gemini na sidebar")
@@ -388,25 +334,21 @@ def main():
                     generated_prompt = generate_prompt(project_idea, code_snippets, guide_content, api_key, file_count)
                     
                     if generated_prompt:
-                        st.markdown('<div class="generated-prompt">', unsafe_allow_html=True)
-                        st.markdown("### 📝 Seu Prompt Otimizado:")
-                        st.markdown(generated_prompt)
-                        st.markdown('</div>', unsafe_allow_html=True)
-                        
-                        # Botão para copiar
-                        st.code(generated_prompt, language=None)
-                        
-                        # Opção de download
-                        st.download_button(
-                            label="💾 Download do Prompt",
-                            data=generated_prompt,
-                            file_name="prompt_otimizado.txt",
-                            mime="text/plain"
-                        )
+                        with result_area:
+                            st.markdown('<div class="generated-prompt">', unsafe_allow_html=True)
+                            st.markdown("### 📝 Seu Prompt Otimizado:")
+                            st.markdown(generated_prompt)
+                            st.markdown('</div>', unsafe_allow_html=True)
+                            st.code(generated_prompt, language=None)
+                            st.download_button(
+                                label="💾 Download do Prompt",
+                                data=generated_prompt,
+                                file_name="prompt_otimizado.txt",
+                                mime="text/plain"
+                            )
                     else:
                         st.error("❌ Erro ao gerar o prompt. Verifique sua API Key e tente novamente.")
 
-    # Footer
     st.divider()
     st.markdown("""
     <div style="text-align: center; color: #666; margin-top: 2rem;">
